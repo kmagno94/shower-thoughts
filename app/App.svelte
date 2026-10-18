@@ -1,12 +1,35 @@
 <script>
+  import { buildScript } from './lib/script.js';
+
   let raw = $state('');
-  let note = $state('');
+  let script = $state(null);
+  let copyMsg = $state('');
   const ready = $derived(raw.trim().length > 0);
 
   function generate() {
     if (!ready) return;
-    // The script builder arrives in the next step. For now, confirm the tap landed.
-    note = 'Got it. The script builder arrives in the next update.';
+    script = buildScript(raw);
+    copyMsg = '';
+  }
+
+  /* Clipboard first; older iPhones fall back to selecting a hidden text box. */
+  async function copy() {
+    if (!script) return;
+    const text = script.markdown;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyMsg = 'Copied. Paste it anywhere.';
+      return;
+    } catch (e) {}
+    try {
+      const t = document.createElement('textarea');
+      t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select(); t.setSelectionRange(0, text.length);
+      const ok = document.execCommand('copy'); t.remove();
+      copyMsg = ok ? 'Copied. Paste it anywhere.' : "Couldn't copy here. Press and hold the script to select it.";
+    } catch (e) {
+      copyMsg = "Couldn't copy here. Press and hold the script to select it.";
+    }
   }
 </script>
 
@@ -19,13 +42,40 @@
     <textarea
       id="raw"
       bind:value={raw}
-      oninput={() => (note = '')}
       rows="9"
       placeholder="Dump it here, messy is fine. Put a blank line between ideas and start each one with a short title."
       autocomplete="off"
       autocapitalize="sentences"
       spellcheck="true"></textarea>
     <button id="generate" class="primary" type="button" disabled={!ready} onclick={generate}>Generate script</button>
-    <p id="note" class="note" hidden={!note} aria-live="polite">{note}</p>
   </section>
+
+  {#if script}
+    <section id="script" class="card script" aria-live="polite">
+      <h2 id="scriptTitle">{script.title}</h2>
+      <p class="hint">Quick version: it tidies your words into the layout. Real reorganizing comes with the Gemini upgrade.</p>
+
+      {#each script.blocks as b}
+        <article class="idea">
+          <h3>{b.title}</h3>
+          <p class="tag">🎙️ Read this out loud</p>
+          <p class="read">{b.readAloud}</p>
+          <p class="tag">🧩 Skeleton</p>
+          <ul class="skel">
+            {#each b.skeleton as [label, value]}
+              <li><b>{label}:</b> {value}</li>
+            {/each}
+          </ul>
+        </article>
+      {/each}
+
+      <details class="rawbox">
+        <summary>📝 Raw note (kept at the bottom of the note)</summary>
+        <p class="raw">{script.rawNote}</p>
+      </details>
+
+      <button id="copy" class="primary" type="button" onclick={copy}>Copy script</button>
+      <p id="copyMsg" class="note" hidden={!copyMsg} aria-live="polite">{copyMsg}</p>
+    </section>
+  {/if}
 </main>

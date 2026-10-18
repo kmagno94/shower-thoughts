@@ -53,3 +53,16 @@ button.primary {
 }
 button.primary:disabled { opacity: 0.45; cursor: default; }
 .note { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+
+.script h2 { margin: 0; font-size: 22px; line-height: 1.25; }
+.hint { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.idea { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.idea h3 { margin: 0 0 6px; font-size: 18px; }
+.tag { margin: 10px 0 2px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+.read { margin: 0; font-size: 18px; line-height: 1.6; }
+.skel { margin: 0; padding-left: 20px; }
+.skel li { margin: 2px 0; }
+.rawbox { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.rawbox summary { cursor: pointer; font-weight: 700; min-height: 32px; }
+.raw { margin: 8px 0 0; white-space: pre-wrap; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+.read, .skel li { overflow-wrap: anywhere; }
