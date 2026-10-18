@@ -32,3 +32,24 @@ body {
 .wrap { max-width: 640px; margin: 0 auto; }
 h1 { margin: 0; font-size: 30px; line-height: 1.15; letter-spacing: -0.01em; }
 .sub { margin: 6px 0 0; color: var(--muted); }
+
+.card {
+  margin-top: 20px; padding: 16px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 14px;
+}
+.label { display: block; font-weight: 700; margin-bottom: 8px; }
+/* 17px keeps iPhone Safari from zooming in when the box gets focus. */
+textarea {
+  display: block; width: 100%; min-height: 200px; resize: vertical;
+  padding: 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 17px; line-height: 1.5;
+}
+textarea::placeholder { color: var(--muted); }
+textarea:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button.primary {
+  display: block; width: 100%; min-height: 48px; margin-top: 12px;
+  border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink);
+  font: inherit; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+button.primary:disabled { opacity: 0.45; cursor: default; }
+.note { margin: 10px 0 0; color: var(--muted); font-size: 15px; }

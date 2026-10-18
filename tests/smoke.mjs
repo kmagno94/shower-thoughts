@@ -69,6 +69,30 @@ await check('Hidden elements stay hidden (DEV-1)', async () => {
   expect(!shown, '[hidden] can be overridden');
 });
 
+await check('Generate stays off until there is text', async () => {
+  const p = await page();
+  expect(await p.isVisible('#raw'), 'text box missing');
+  expect(await p.isDisabled('#generate'), 'Generate should start disabled');
+  await p.fill('#raw', '   \n  ');
+  expect(await p.isDisabled('#generate'), 'Generate should ignore blank space');
+  await p.fill('#raw', 'Web app Shower thoughts\nQuickly formulate spontaneous ideas');
+  expect(await p.isEnabled('#generate'), 'Generate should turn on with text');
+});
+
+await check('Text box does not trigger iPhone zoom (17px or more)', async () => {
+  const p = await page();
+  const size = await p.evaluate(() => parseFloat(getComputedStyle(document.getElementById('raw')).fontSize));
+  expect(size >= 16, 'text box font is ' + size + 'px');
+});
+
+await check('Tapping Generate answers right away', async () => {
+  const p = await page();
+  await p.fill('#raw', 'Things to add\nSomething went wrong button?');
+  await p.click('#generate');
+  expect(await p.isVisible('#note'), 'no response after tapping Generate');
+  expect(p.errors.length === 0, 'errors: ' + p.errors.join(' | '));
+});
+
 await browser.close();
 server.kill();
 for (const r of results) console.log(r[0] + '  ' + r[1] + (r[2] ? '  -> ' + r[2] : ''));
