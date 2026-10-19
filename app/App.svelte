@@ -31,7 +31,7 @@
 
   /* Save to Notes (Building Log Step 14): copy the script, then run the Save
      Shower Thought shortcut with input=clipboard, so the script never rides in
-     the link (DEV-3). The shortcut only saves text containing "Read this out loud". */
+     the link (DEV-3). The shortcut only saves text containing "Talking points". */
   const SAVE_SHORTCUT = 'Save Shower Thought';
   const saveHref = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SAVE_SHORTCUT) + '&input=clipboard';
   let saveLink;
@@ -122,17 +122,20 @@
   {#if script}
     <section id="script" class="card script" aria-live="polite">
       <h2 id="scriptTitle">{script.title}</h2>
-      <p class="hint">Quick version: it tidies your words into the layout. Real reorganizing comes with the Gemini upgrade.</p>
+      <p class="hint">Quick version: it sorts your own lines into talking points. Shorter, smarter points come with the Gemini upgrade.</p>
 
       <article class="idea">
-        <p class="tag">🎙️ Read this out loud</p>
-        <p class="read">{script.readAloud}</p>
-        <p class="tag">🧩 Skeleton</p>
-        <ul class="skel">
-          {#each script.skeleton as [label, value]}
-            <li><b>{label}:</b> {value}</li>
+        <p class="tag">🎙️ Talking points</p>
+        <ol class="points">
+          {#each script.points as [label, items]}
+            <li>
+              <b>{label}</b>
+              <ul>
+                {#each items as item}<li>{item}</li>{/each}
+              </ul>
+            </li>
           {/each}
-        </ul>
+        </ol>
       </article>
 
       <details class="rawbox">

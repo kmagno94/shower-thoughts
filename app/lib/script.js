@@ -1,17 +1,22 @@
-/* No-key script builder. One idea per script (Kevin's call, Building Log Step 9):
-   the whole box is one idea, the first line is its title, and blank lines are
-   just paragraphs. It only rearranges what you wrote: no new facts, nothing dropped. */
+/* No-key script builder. One idea per script (Step 9), written as talking points
+   in speaking order (Step 19): the idea, how it works right now, what I want,
+   then what to ask about. It only rearranges what you wrote: no new facts,
+   nothing dropped. The note keeps the raw idea at the bottom. */
 
 const QUESTION = /\?\s*$|^(maybe|which|how do|how would|could i|do i)\b|\b(not sure|is there a way|what if|should i|i wonder)\b/i;
 const RIGHT_NOW = /^(right now|currently|today i|at the moment|for now)\b/i;
+
+/* The Save Shower Thought shortcut only saves notes that contain this heading. */
+export const MARKER = 'Talking points';
 
 function cleanLine(line) {
   return line.replace(/^\s*([-*•◦]|\d+[.)])\s+/, '').replace(/\s+/g, ' ').trim();
 }
 
-function sentence(line) {
+/* A talking point is the line itself, first letter capitalized, without a trailing period. */
+function point(line) {
   const s = line.charAt(0).toUpperCase() + line.slice(1);
-  return /[.!?]["')\]]?$/.test(s) ? s : s + '.';
+  return s.replace(/\.+$/, '');
 }
 
 /* The first line is the title. A single line is both the title and the idea. */
@@ -25,34 +30,36 @@ export function readIdea(raw) {
   return { title: lines[0], lines: lines.slice(1) };
 }
 
-function skeleton(idea) {
-  const now = [], want = [], open = [];
+/* Groups in the order you'd say them. Empty groups are left out. */
+function talkingPoints(idea) {
+  const now = [], want = [], ask = [];
   for (const line of idea.lines) {
-    if (RIGHT_NOW.test(line)) now.push(line);
-    else if (QUESTION.test(line)) open.push(line);
-    else want.push(line);
+    if (RIGHT_NOW.test(line)) now.push(point(line));
+    else if (QUESTION.test(line)) ask.push(point(line));
+    else want.push(point(line));
   }
-  const join = list => (list.length ? list.join('; ') : 'None noted');
-  return [
-    ['What it is', idea.title],
-    ['Right now', join(now)],
-    ['What I want', join(want)],
-    ['Open questions', join(open)]
-  ];
+  const groups = [['The idea', [point(idea.title)]]];
+  if (now.length) groups.push(['Right now', now]);
+  if (want.length) groups.push(['What I want', want]);
+  if (ask.length) groups.push(['Ask about', ask]);
+  return groups;
 }
 
-/* Returns the script as data (for the page) and as Markdown (for copying and Apple Notes). */
+/* Returns the script as data (for the page) and as Markdown (for Apple Notes). */
 export function buildScript(raw) {
   const idea = readIdea(raw);
   if (!idea) return null;
   const title = '💡 ' + idea.title;
-  const readAloud = [`This one is called ${idea.title.replace(/[.!?]+$/, '')}.`, ...idea.lines.map(sentence)].join(' ');
-  const parts = skeleton(idea);
+  const points = talkingPoints(idea);
   const rawNote = raw.replace(/\r\n?/g, '\n').trim();
 
-  const md = [`# ${title}`, '', '**🎙️ Read this out loud**', readAloud, '', '**🧩 Skeleton**'];
-  for (const [label, value] of parts) md.push(`- ${label}: ${value}`);
-  md.push('', '---', '', '## 📝 Raw note', '', rawNote);
+  const md = [`# ${title}`, '', `## 🎙️ ${MARKER}`, ''];
+  points.forEach(([label, items], i) => {
+    md.push(`**${i + 1}. ${label}**`);
+    for (const item of items) md.push(`- ${item}`);
+    md.push('');
+  });
+  md.push('---', '', '## 📝 Raw note', '', rawNote);
 
-  return { title, readAloud, skeleton: parts, rawNote, markdown: md.join('\n') };
+  return { title, points, rawNote, markdown: md.join('\n') };
 }

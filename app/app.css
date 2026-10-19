@@ -66,6 +66,12 @@ button.primary:disabled { opacity: 0.45; cursor: default; }
 .rawbox summary { cursor: pointer; font-weight: 700; min-height: 32px; }
 .raw { margin: 8px 0 0; white-space: pre-wrap; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
 .read, .skel li { overflow-wrap: anywhere; }
+.points { margin: 4px 0 0; padding-left: 24px; }
+.points > li { margin-top: 10px; }
+.points > li::marker { font-weight: 700; color: var(--accent); }
+.points b { font-size: 17px; }
+.points ul { margin: 4px 0 0; padding-left: 18px; }
+.points ul li { margin: 4px 0; font-size: 18px; line-height: 1.45; overflow-wrap: anywhere; }
 
 .voice { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 a.secondary {

@@ -110,23 +110,36 @@ await check('Blank lines stay inside the same idea', async () => {
   await p.click('#generate');
   expect((await p.$$('.idea')).length === 1, 'blank line split the idea');
   expect((await p.textContent('#scriptTitle')).includes('Web app for new class'), 'title wrong');
-  expect((await p.textContent('.read')).includes('Link to next task.'), 'line after the blank line was dropped');
+  expect((await p.textContent('.points')).includes('Link to next task'), 'line after the blank line was dropped');
 });
 
-await check('Questions, right now lines, and every word are kept', async () => {
+/* Talking points as [label, items] in the order shown (Step 19). */
+const groups = p => p.$$eval('.points > li', els => els.map(li => [li.querySelector('b').textContent.trim(), [...li.querySelectorAll('ul li')].map(x => x.textContent.trim())]));
+
+await check('Talking points come in speaking order with every word kept (Step 19)', async () => {
   const p = await page();
   await p.fill('#raw', SHOWER_IDEA);
   await p.click('#generate');
-  const text = await p.textContent('.idea');
-  expect(/Right now: Right now I just jot down/.test(text), 'right now line not caught');
-  expect(/Open questions: But what if my ideas could go into a web app/.test(text), 'what if line not caught as a question');
-  const all = text.toLowerCase();
+  const g = await groups(p);
+  expect(JSON.stringify(g.map(x => x[0])) === JSON.stringify(['The idea', 'Right now', 'What I want', 'Ask about']), 'wrong order: ' + g.map(x => x[0]).join(' | '));
+  expect(g[0][1][0] === 'Web app Shower thoughts', 'idea point wrong: ' + g[0][1][0]);
+  expect(g[1][1][0].startsWith('Right now I just jot down'), 'right now line not caught');
+  expect(g[3][1][0].startsWith('But what if my ideas could go into a web app'), 'what if line not under Ask about');
+  expect(g.every(x => x[1].every(i => !/\.$/.test(i))), 'talking points should not end in a period');
+  expect(!(await p.$('.read')), 'the big read-aloud paragraph should be gone');
+  const all = g.flatMap(x => x[1]).join(' ').toLowerCase();
   for (const word of ['spontaneous ideas', 'speak to prompt', 'include this note as an example', 'two options to talk it out', 'cloud model']) {
     expect(all.includes(word), 'dropped: ' + word);
   }
+});
+
+await check('Questions land under Ask about and empty groups are skipped', async () => {
+  const p = await page();
   await p.fill('#raw', 'Things to add\nSomething went wrong button?\nNot sure where to route. Maybe trigger cowork task');
   await p.click('#generate');
-  expect(/Open questions: Something went wrong button\?; Not sure where to route/.test(await p.textContent('.idea')), 'questions not caught');
+  const g = await groups(p);
+  expect(JSON.stringify(g.map(x => x[0])) === JSON.stringify(['The idea', 'Ask about']), 'wrong groups: ' + g.map(x => x[0]).join(' | '));
+  expect(g[1][1][0] === 'Something went wrong button?' && g[1][1][1].startsWith('Not sure where to route'), 'questions not caught');
 });
 
 await check('Copy puts the Markdown script and raw note on the clipboard', async () => {
@@ -139,7 +152,7 @@ await check('Copy puts the Markdown script and raw note on the clipboard', async
   await p.waitForSelector('#copyMsg:not([hidden])');
   const clip = await p.evaluate(() => navigator.clipboard.readText());
   expect(clip.startsWith('# \ud83d\udca1 Web app Shower thoughts'), 'clipboard does not start with the note title');
-  expect(clip.includes('**\ud83c\udf99\ufe0f Read this out loud**') && clip.includes('- Open questions:'), 'clipboard missing script sections');
+  expect(clip.includes('## \ud83c\udf99\ufe0f Talking points') && clip.includes('**1. The idea**') && clip.includes('**4. Ask about**'), 'clipboard missing talking points');
   expect(clip.includes('## \ud83d\udcdd Raw note') && clip.includes('Utilize shortcut use cloud model'), 'raw note missing from clipboard');
 });
 
@@ -148,7 +161,7 @@ await check('One line with no title still works', async () => {
   await p.fill('#raw', 'remind me to try a sauna playlist');
   await p.click('#generate');
   expect((await p.textContent('#scriptTitle')).includes('remind me to try a sauna playlist'), 'single line title wrong');
-  expect((await p.textContent('.read')).includes('Remind me to try a sauna playlist.'), 'single line not read back');
+  expect((await p.textContent('.points')).includes('Remind me to try a sauna playlist'), 'single line not in talking points');
 });
 
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1';
@@ -214,7 +227,7 @@ await check('Save to Notes copies the script and runs Save Shower Thought with t
   await p.click('#save');
   await p.waitForFunction(() => window.__opened, null, { timeout: 3000 });
   const clip = await p.evaluate(() => navigator.clipboard.readText());
-  expect(clip.startsWith('# \ud83d\udca1 Web app Shower thoughts') && clip.includes('Read this out loud'), 'clipboard does not hold the script');
+  expect(clip.startsWith('# \ud83d\udca1 Web app Shower thoughts') && clip.includes('Talking points'), 'clipboard does not hold the script');
   expect(await p.isVisible('#copyMsg'), 'no message after saving');
   expect(p.errors.length === 0, 'errors: ' + p.errors.join(' | '));
 });
