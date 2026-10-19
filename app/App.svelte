@@ -31,13 +31,66 @@
       copyMsg = "Couldn't copy here. Press and hold the script to select it.";
     }
   }
+
+  /* Talk it out runs the same Speak to Prompt shortcut. The text input tells the
+     shortcut to bring you back here instead of to Speak to Prompt (Step 11). */
+  const SHORTCUT = 'Speak to Prompt';
+  const RETURN_FLAG = 'shower-thoughts';
+  const talkHref = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT) + '&input=text&text=' + RETURN_FLAG;
+  const PLACEHOLDER = 'Speak to Prompt: waiting for your transcript';
+
+  /* The shortcut needs an iPhone or iPad, so computers just get the text box. */
+  const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent || '';
+  const appleTouch = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+
+  let pasteMode = $state(false);
+  let pasteMsg = $state('');
+
+  /* #paste: the shortcut is back with a fresh transcript on the clipboard.
+     Listen for hashchange and pageshow too, not just page load (DEV-4). */
+  function checkHash() {
+    if (location.hash === '#paste') { pasteMode = true; pasteMsg = ''; }
+  }
+  $effect(() => {
+    checkHash();
+    const onShow = e => { if (e.persisted) checkHash(); };
+    window.addEventListener('hashchange', checkHash);
+    window.addEventListener('pageshow', onShow);
+    return () => { window.removeEventListener('hashchange', checkHash); window.removeEventListener('pageshow', onShow); };
+  });
+
+  async function pasteTranscript() {
+    let text = '';
+    try { text = (await navigator.clipboard.readText()).trim(); }
+    catch (e) { pasteMsg = "Couldn't read the clipboard. Press and hold in the box and tap Paste."; return; }
+    if (!text) { pasteMsg = 'The clipboard is empty. In Voice Memos, choose Copy Transcript first.'; return; }
+    if (text === PLACEHOLDER) { pasteMsg = "That's the shortcut's placeholder, not your transcript. In Voice Memos, choose Copy Transcript first."; return; }
+    raw = text;
+    script = null;
+    pasteMode = false;
+    history.replaceState(null, '', location.pathname + location.search);
+  }
 </script>
 
 <main class="wrap">
   <h1 id="title">Shower Thoughts <span aria-hidden="true">💡</span></h1>
   <p class="sub">Raw ideas in, read-aloud scripts out.</p>
 
+  {#if pasteMode}
+    <section id="pasteWrap" class="card banner" aria-live="polite">
+      <p class="label">Back from Voice Memos</p>
+      <button id="paste" class="primary" type="button" onclick={pasteTranscript}>📋 Tap to paste your transcript</button>
+      <p id="pasteMsg" class="note" hidden={!pasteMsg}>{pasteMsg}</p>
+    </section>
+  {/if}
+
   <section class="card">
+    {#if appleTouch}
+      <div id="voiceRow" class="voice">
+        <a id="talkLink" class="secondary" href={talkHref}>🎙️ Talk it out</a>
+        <p class="hint">Record in Voice Memos, copy the transcript, and it brings you back here to paste.</p>
+      </div>
+    {/if}
     <label class="label" for="raw">What's on your mind?</label>
     <textarea
       id="raw"

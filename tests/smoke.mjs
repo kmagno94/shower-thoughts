@@ -151,6 +151,57 @@ await check('One line with no title still works', async () => {
   expect((await p.textContent('.read')).includes('Remind me to try a sauna playlist.'), 'single line not read back');
 });
 
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1';
+async function clipPage(hash = '', ua) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'], ...(ua ? { userAgent: ua } : {}) });
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(BASE + hash);
+  return p;
+}
+
+await check('Talk it out runs the Speak to Prompt shortcut with the return flag', async () => {
+  const p = await clipPage('', IPHONE);
+  expect(await p.isVisible('#talkLink'), 'Talk it out missing on iPhone');
+  const href = await p.getAttribute('#talkLink', 'href');
+  expect(href === 'shortcuts://run-shortcut?name=Speak%20to%20Prompt&input=text&text=shower-thoughts', 'wrong link: ' + href);
+});
+
+await check('Computers get just the text box (no Talk it out)', async () => {
+  const p = await page();
+  expect(!(await p.$('#talkLink')), 'Talk it out should not show on a computer');
+});
+
+await check('#paste shows one big paste button that fills the box', async () => {
+  const p = await clipPage('#paste', IPHONE);
+  await p.waitForSelector('#pasteWrap');
+  await p.evaluate(() => navigator.clipboard.writeText('Web app Shower thoughts\nGive two options to talk it out or a text box'));
+  await p.click('#paste');
+  await p.waitForSelector('#pasteWrap', { state: 'detached', timeout: 3000 }).catch(() => {});
+  expect((await p.inputValue('#raw')).startsWith('Web app Shower thoughts'), 'transcript not pasted into the box');
+  expect(!(await p.$('#pasteWrap')), 'banner should close after pasting');
+  expect(!(await p.evaluate(() => location.hash)), '#paste should be cleared');
+  expect(await p.isEnabled('#generate'), 'Generate should be ready after pasting');
+});
+
+await check('Paste rejects the shortcut placeholder (DEV-13)', async () => {
+  const p = await clipPage('#paste', IPHONE);
+  await p.evaluate(() => navigator.clipboard.writeText('Speak to Prompt: waiting for your transcript'));
+  await p.click('#paste');
+  await p.waitForSelector('#pasteMsg:not([hidden])', { timeout: 3000 }).catch(() => {});
+  expect(await p.isVisible('#pasteMsg'), 'no warning for the placeholder: ' + await p.textContent('#pasteMsg'));
+  expect((await p.inputValue('#raw')) === '', 'placeholder should not fill the box');
+});
+
+await check('#paste also works when the page is already open (hashchange, DEV-4)', async () => {
+  const p = await clipPage('', IPHONE);
+  expect(!(await p.$('#pasteWrap')), 'banner should not show without #paste');
+  await p.evaluate(() => { location.hash = '#paste'; });
+  await p.waitForSelector('#pasteWrap', { timeout: 2000 });
+  expect(p.errors.length === 0, 'errors: ' + p.errors.join(' | '));
+});
+
 await browser.close();
 server.kill();
 for (const r of results) console.log(r[0] + '  ' + r[1] + (r[2] ? '  -> ' + r[2] : ''));

@@ -66,3 +66,13 @@ button.primary:disabled { opacity: 0.45; cursor: default; }
 .rawbox summary { cursor: pointer; font-weight: 700; min-height: 32px; }
 .raw { margin: 8px 0 0; white-space: pre-wrap; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
 .read, .skel li { overflow-wrap: anywhere; }
+
+.voice { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+a.secondary {
+  display: flex; align-items: center; justify-content: center; min-height: 48px;
+  border: 2px solid var(--accent); border-radius: 12px; color: var(--accent);
+  font-weight: 700; text-decoration: none; -webkit-tap-highlight-color: transparent;
+}
+a.secondary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.banner { border: 2px solid var(--accent); }
+.banner .label { margin: 0; }
