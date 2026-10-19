@@ -76,3 +76,10 @@ a.secondary {
 a.secondary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .banner { border: 2px solid var(--accent); }
 .banner .label { margin: 0; }
+
+button.ghost {
+  display: block; width: 100%; min-height: 44px; margin-top: 8px;
+  border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink);
+  font: inherit; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+button.ghost:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }

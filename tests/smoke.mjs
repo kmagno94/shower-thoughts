@@ -202,6 +202,32 @@ await check('#paste also works when the page is already open (hashchange, DEV-4)
   expect(p.errors.length === 0, 'errors: ' + p.errors.join(' | '));
 });
 
+await check('Save to Notes copies the script and runs Save Shower Thought with the clipboard', async () => {
+  const p = await clipPage('', IPHONE);
+  await p.fill('#raw', SHOWER_IDEA);
+  await p.click('#generate');
+  expect(await p.isVisible('#save'), 'Save to Notes missing on iPhone');
+  const href = await p.getAttribute('#saveLink', 'href');
+  expect(href === 'shortcuts://run-shortcut?name=Save%20Shower%20Thought&input=clipboard', 'wrong save link: ' + href);
+  expect(!/text=/.test(href), 'script must not ride in the link (DEV-3)');
+  await p.evaluate(() => { const a = document.getElementById('saveLink'); a.addEventListener('click', e => { e.preventDefault(); window.__opened = a.href; }); });
+  await p.click('#save');
+  await p.waitForFunction(() => window.__opened, null, { timeout: 3000 });
+  const clip = await p.evaluate(() => navigator.clipboard.readText());
+  expect(clip.startsWith('# \ud83d\udca1 Web app Shower thoughts') && clip.includes('Read this out loud'), 'clipboard does not hold the script');
+  expect(await p.isVisible('#copyMsg'), 'no message after saving');
+  expect(p.errors.length === 0, 'errors: ' + p.errors.join(' | '));
+});
+
+await check('Mac also gets Save to Notes; other computers just get Copy', async () => {
+  const mac = await clipPage('', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Safari/605.1.15');
+  await mac.fill('#raw', SHOWER_IDEA); await mac.click('#generate');
+  expect(await mac.isVisible('#save'), 'Save to Notes missing on Mac');
+  const other = await page();
+  await other.fill('#raw', SHOWER_IDEA); await other.click('#generate');
+  expect(!(await other.$('#save')) && await other.isVisible('#copy'), 'non-Apple computer should only get Copy');
+});
+
 await browser.close();
 server.kill();
 for (const r of results) console.log(r[0] + '  ' + r[1] + (r[2] ? '  -> ' + r[2] : ''));

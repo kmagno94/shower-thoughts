@@ -13,23 +13,37 @@
   }
 
   /* Clipboard first; older iPhones fall back to selecting a hidden text box. */
-  async function copy() {
-    if (!script) return;
-    const text = script.markdown;
-    try {
-      await navigator.clipboard.writeText(text);
-      copyMsg = 'Copied. Paste it anywhere.';
-      return;
-    } catch (e) {}
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
     try {
       const t = document.createElement('textarea');
       t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
       document.body.appendChild(t); t.select(); t.setSelectionRange(0, text.length);
       const ok = document.execCommand('copy'); t.remove();
-      copyMsg = ok ? 'Copied. Paste it anywhere.' : "Couldn't copy here. Press and hold the script to select it.";
-    } catch (e) {
-      copyMsg = "Couldn't copy here. Press and hold the script to select it.";
+      return ok;
+    } catch (e) { return false; }
+  }
+
+  async function copy() {
+    if (!script) return;
+    copyMsg = (await copyText(script.markdown)) ? 'Copied. Paste it anywhere.' : "Couldn't copy here. Press and hold the script to select it.";
+  }
+
+  /* Save to Notes (Building Log Step 14): copy the script, then run the Save
+     Shower Thought shortcut with input=clipboard, so the script never rides in
+     the link (DEV-3). The shortcut only saves text containing "Read this out loud". */
+  const SAVE_SHORTCUT = 'Save Shower Thought';
+  const saveHref = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SAVE_SHORTCUT) + '&input=clipboard';
+  let saveLink;
+
+  async function save() {
+    if (!script) return;
+    if (!(await copyText(script.markdown))) {
+      copyMsg = "Couldn't copy the script, so nothing was sent. Tap Copy script and try again.";
+      return;
     }
+    saveLink.click();
+    copyMsg = 'Sent to your Save Shower Thought shortcut. Look for the "Saved to Shower Thoughts \ud83d\udca1" notification. Nothing happened? The shortcut name must be exactly Save Shower Thought.';
   }
 
   /* Talk it out runs Kevin's Shower Thoughts shortcut, a copy of the Speak to
@@ -42,6 +56,8 @@
   /* The shortcut needs an iPhone or iPad, so computers just get the text box. */
   const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent || '';
   const appleTouch = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  /* Save to Notes works anywhere Shortcuts and Notes do: iPhone, iPad, and Mac. */
+  const apple = appleTouch || /Macintosh/.test(ua);
 
   let pasteMode = $state(false);
   let pasteMsg = $state('');
@@ -124,7 +140,13 @@
         <p class="raw">{script.rawNote}</p>
       </details>
 
-      <button id="copy" class="primary" type="button" onclick={copy}>Copy script</button>
+      {#if apple}
+        <button id="save" class="primary" type="button" onclick={save}>💾 Save to Notes</button>
+        <a id="saveLink" href={saveHref} bind:this={saveLink} hidden aria-hidden="true" tabindex="-1">Save Shower Thought</a>
+        <button id="copy" class="ghost" type="button" onclick={copy}>Copy script</button>
+      {:else}
+        <button id="copy" class="primary" type="button" onclick={copy}>Copy script</button>
+      {/if}
       <p id="copyMsg" class="note" hidden={!copyMsg} aria-live="polite">{copyMsg}</p>
     </section>
   {/if}
