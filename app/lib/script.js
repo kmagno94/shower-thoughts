@@ -6,8 +6,11 @@
 const QUESTION = /\?\s*$|^(maybe|which|how do|how would|could i|do i)\b|\b(not sure|is there a way|what if|should i|i wonder)\b/i;
 const RIGHT_NOW = /^(right now|currently|today i|at the moment|for now)\b/i;
 
-/* The Save Shower Thought shortcut only saves notes that contain this heading. */
 export const MARKER = 'Talking points';
+/* The Save Shower Thought shortcut only saves text containing this exact phrase
+   (its If step, Building Log Steps 15 to 17), so every note carries it. */
+export const SAVE_CHECK = 'Read this out loud';
+export const CUE = `${SAVE_CHECK}, one point at a time.`;
 
 function cleanLine(line) {
   return line.replace(/^\s*([-*•◦]|\d+[.)])\s+/, '').replace(/\s+/g, ' ').trim();
@@ -53,7 +56,7 @@ export function buildScript(raw) {
   const points = talkingPoints(idea);
   const rawNote = raw.replace(/\r\n?/g, '\n').trim();
 
-  const md = [`# ${title}`, '', `## 🎙️ ${MARKER}`, ''];
+  const md = [`# ${title}`, '', `## 🎙️ ${MARKER}`, CUE, ''];
   points.forEach(([label, items], i) => {
     md.push(`**${i + 1}. ${label}**`);
     for (const item of items) md.push(`- ${item}`);

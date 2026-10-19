@@ -1,5 +1,5 @@
 <script>
-  import { buildScript } from './lib/script.js';
+  import { buildScript, CUE } from './lib/script.js';
 
   let raw = $state('');
   let script = $state(null);
@@ -24,6 +24,7 @@
     } catch (e) { return false; }
   }
 
+  /* Copy is only for computers that can't run Shortcuts (Step 20). */
   async function copy() {
     if (!script) return;
     copyMsg = (await copyText(script.markdown)) ? 'Copied. Paste it anywhere.' : "Couldn't copy here. Press and hold the script to select it.";
@@ -31,7 +32,7 @@
 
   /* Save to Notes (Building Log Step 14): copy the script, then run the Save
      Shower Thought shortcut with input=clipboard, so the script never rides in
-     the link (DEV-3). The shortcut only saves text containing "Talking points". */
+     the link (DEV-3). The shortcut only saves text containing "Read this out loud". */
   const SAVE_SHORTCUT = 'Save Shower Thought';
   const saveHref = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SAVE_SHORTCUT) + '&input=clipboard';
   let saveLink;
@@ -39,7 +40,7 @@
   async function save() {
     if (!script) return;
     if (!(await copyText(script.markdown))) {
-      copyMsg = "Couldn't copy the script, so nothing was sent. Tap Copy script and try again.";
+      copyMsg = "Couldn't hand the script to Shortcuts, so nothing was saved. Tap Save to Notes again.";
       return;
     }
     saveLink.click();
@@ -126,6 +127,7 @@
 
       <article class="idea">
         <p class="tag">🎙️ Talking points</p>
+        <p class="cue">{CUE}</p>
         <ol class="points">
           {#each script.points as [label, items]}
             <li>
@@ -146,7 +148,6 @@
       {#if apple}
         <button id="save" class="primary" type="button" onclick={save}>💾 Save to Notes</button>
         <a id="saveLink" href={saveHref} bind:this={saveLink} hidden aria-hidden="true" tabindex="-1">Save Shower Thought</a>
-        <button id="copy" class="ghost" type="button" onclick={copy}>Copy script</button>
       {:else}
         <button id="copy" class="primary" type="button" onclick={copy}>Copy script</button>
       {/if}

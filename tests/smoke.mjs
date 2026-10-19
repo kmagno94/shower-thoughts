@@ -142,7 +142,7 @@ await check('Questions land under Ask about and empty groups are skipped', async
   expect(g[1][1][0] === 'Something went wrong button?' && g[1][1][1].startsWith('Not sure where to route'), 'questions not caught');
 });
 
-await check('Copy puts the Markdown script and raw note on the clipboard', async () => {
+await check('Copy (computers without Shortcuts) puts the Markdown script and raw note on the clipboard', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
   const p = await ctx.newPage();
   await p.goto(BASE);
@@ -239,6 +239,24 @@ await check('Mac also gets Save to Notes; other computers just get Copy', async 
   const other = await page();
   await other.fill('#raw', SHOWER_IDEA); await other.click('#generate');
   expect(!(await other.$('#save')) && await other.isVisible('#copy'), 'non-Apple computer should only get Copy');
+});
+
+await check('iPhone shows only Save to Notes, no Copy script (Step 20)', async () => {
+  const p = await clipPage('', IPHONE);
+  await p.fill('#raw', SHOWER_IDEA); await p.click('#generate');
+  expect(await p.isVisible('#save'), 'Save to Notes missing');
+  expect(!(await p.$('#copy')), 'Copy script should be gone on iPhone');
+});
+
+await check('Saved note still passes the Save Shower Thought check (Read this out loud)', async () => {
+  const p = await clipPage('', IPHONE);
+  await p.fill('#raw', SHOWER_IDEA); await p.click('#generate');
+  await p.evaluate(() => { const a = document.getElementById('saveLink'); a.addEventListener('click', e => { e.preventDefault(); window.__opened = 1; }); });
+  await p.click('#save');
+  await p.waitForFunction(() => window.__opened, null, { timeout: 3000 });
+  const clip = await p.evaluate(() => navigator.clipboard.readText());
+  expect(clip.includes('Read this out loud'), 'the shortcut would refuse this note: Read this out loud is missing');
+  expect(clip.includes('## \ud83c\udf99\ufe0f Talking points'), 'Talking points heading missing');
 });
 
 await browser.close();
