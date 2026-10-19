@@ -1,6 +1,6 @@
-/* No-key script builder. Turns a raw shower note into the Step 4 format:
-   one note per save, one block per idea, raw note kept at the bottom.
-   It only rearranges what you wrote: no new facts, nothing dropped. */
+/* No-key script builder. One idea per script (Kevin's call, Building Log Step 9):
+   the whole box is one idea, the first line is its title, and blank lines are
+   just paragraphs. It only rearranges what you wrote: no new facts, nothing dropped. */
 
 const QUESTION = /\?\s*$|^(maybe|which|how do|how would|could i|do i)\b|\b(not sure|is there a way|what if|should i|i wonder)\b/i;
 const RIGHT_NOW = /^(right now|currently|today i|at the moment|for now)\b/i;
@@ -14,22 +14,15 @@ function sentence(line) {
   return /[.!?]["')\]]?$/.test(s) ? s : s + '.';
 }
 
-/* Blank lines separate ideas; the first line of each block is its title. */
-export function splitIdeas(raw) {
-  const blocks = raw.replace(/\r\n?/g, '\n').split(/\n\s*\n+/);
-  const ideas = [];
-  for (const block of blocks) {
-    const lines = block.split('\n').map(cleanLine).filter(Boolean);
-    if (!lines.length) continue;
-    if (lines.length === 1) {
-      const only = lines[0];
-      const title = only.length > 60 ? only.slice(0, 57).trimEnd() + '...' : only;
-      ideas.push({ title, lines: [only] });
-    } else {
-      ideas.push({ title: lines[0], lines: lines.slice(1) });
-    }
+/* The first line is the title. A single line is both the title and the idea. */
+export function readIdea(raw) {
+  const lines = raw.replace(/\r\n?/g, '\n').split('\n').map(cleanLine).filter(Boolean);
+  if (!lines.length) return null;
+  if (lines.length === 1) {
+    const only = lines[0];
+    return { title: only.length > 60 ? only.slice(0, 57).trimEnd() + '...' : only, lines: [only] };
   }
-  return ideas;
+  return { title: lines[0], lines: lines.slice(1) };
 }
 
 function skeleton(idea) {
@@ -50,24 +43,16 @@ function skeleton(idea) {
 
 /* Returns the script as data (for the page) and as Markdown (for copying and Apple Notes). */
 export function buildScript(raw) {
-  const ideas = splitIdeas(raw);
-  if (!ideas.length) return null;
-  const more = ideas.length - 1;
-  const title = '💡 ' + ideas[0].title + (more ? `, and ${more} more` : '');
-  const blocks = ideas.map(idea => ({
-    title: idea.title,
-    readAloud: [`This one is called ${idea.title.replace(/[.!?]+$/, '')}.`, ...idea.lines.map(sentence)].join(' '),
-    skeleton: skeleton(idea)
-  }));
+  const idea = readIdea(raw);
+  if (!idea) return null;
+  const title = '💡 ' + idea.title;
+  const readAloud = [`This one is called ${idea.title.replace(/[.!?]+$/, '')}.`, ...idea.lines.map(sentence)].join(' ');
+  const parts = skeleton(idea);
   const rawNote = raw.replace(/\r\n?/g, '\n').trim();
 
-  const md = [`# ${title}`, ''];
-  for (const b of blocks) {
-    md.push(`## ${b.title}`, '', '**🎙️ Read this out loud**', b.readAloud, '', '**🧩 Skeleton**');
-    for (const [label, value] of b.skeleton) md.push(`- ${label}: ${value}`);
-    md.push('');
-  }
-  md.push('---', '', '## 📝 Raw note', '', rawNote);
+  const md = [`# ${title}`, '', '**🎙️ Read this out loud**', readAloud, '', '**🧩 Skeleton**'];
+  for (const [label, value] of parts) md.push(`- ${label}: ${value}`);
+  md.push('', '---', '', '## 📝 Raw note', '', rawNote);
 
-  return { title, blocks, rawNote, markdown: md.join('\n') };
+  return { title, readAloud, skeleton: parts, rawNote, markdown: md.join('\n') };
 }

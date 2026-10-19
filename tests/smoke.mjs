@@ -85,69 +85,62 @@ await check('Text box does not trigger iPhone zoom (17px or more)', async () => 
   expect(size >= 16, 'text box font is ' + size + 'px');
 });
 
-/* Kevin's real shower note from Oct 18, 2026 (Building Log Step 4). */
-const SHOWER_NOTE = `Things to add
-Something went wrong button?
-Post prompt build
-Not sure where to route. Maybe trigger cowork task to address concern
-Details of session
-What went wrong
-Premade answers?
-
-Web app for new class
-Pulls next imprint warmup ready to copy into TTS application
-Link to next task
-
-Web app Shower thoughts
+/* One idea from Kevin's real shower note, Oct 18, 2026 (Building Log Step 4). */
+const SHOWER_IDEA = `Web app Shower thoughts
 Quickly formulate spontaneous ideas that came to me in the shower
 Right now I just jot down what's in my head in a note then I build an optimized prompt use Speak to Prompt.
 But what if my ideas could go into a web app and come out in a script that I can speak out clearly
 Include this note as an example
 Give two options to talk it out or a text box
-Utilize shortcut use cloud model for note interpretation
+Utilize shortcut use cloud model for note interpretation`;
 
-Web app Second brain
-Refer to YouTube video and I'd like to setup using that stack
-Include link and transcript
-New to obsidian and is there a way to sync from everything in my notion as a cowork job every day at the end of the day to absorb anything I've done`;
-
-await check('Real shower note becomes 4 idea blocks with the right title', async () => {
+await check('One idea makes one script with its title (Step 9)', async () => {
   const p = await page();
-  await p.fill('#raw', SHOWER_NOTE);
+  await p.fill('#raw', SHOWER_IDEA);
   await p.click('#generate');
   await p.waitForSelector('#script');
-  expect((await p.textContent('#scriptTitle')).trim() === '💡 Things to add, and 3 more', 'wrong note title: ' + await p.textContent('#scriptTitle'));
-  const titles = await p.$$eval('.idea h3', els => els.map(e => e.textContent.trim()));
-  expect(JSON.stringify(titles) === JSON.stringify(['Things to add', 'Web app for new class', 'Web app Shower thoughts', 'Web app Second brain']), 'wrong idea titles: ' + titles.join(' | '));
+  expect((await p.textContent('#scriptTitle')).trim() === '\ud83d\udca1 Web app Shower thoughts', 'wrong title: ' + await p.textContent('#scriptTitle'));
+  expect((await p.$$('.idea')).length === 1, 'should be exactly one idea block');
   expect(p.errors.length === 0, 'errors: ' + p.errors.join(' | '));
+});
+
+await check('Blank lines stay inside the same idea', async () => {
+  const p = await page();
+  await p.fill('#raw', 'Web app for new class\nPulls next imprint warmup ready to copy into TTS application\n\nLink to next task');
+  await p.click('#generate');
+  expect((await p.$$('.idea')).length === 1, 'blank line split the idea');
+  expect((await p.textContent('#scriptTitle')).includes('Web app for new class'), 'title wrong');
+  expect((await p.textContent('.read')).includes('Link to next task.'), 'line after the blank line was dropped');
 });
 
 await check('Questions, right now lines, and every word are kept', async () => {
   const p = await page();
-  await p.fill('#raw', SHOWER_NOTE);
+  await p.fill('#raw', SHOWER_IDEA);
   await p.click('#generate');
-  const blocks = await p.$$eval('.idea', els => els.map(e => e.textContent));
-  expect(/Open questions:[^]*Something went wrong button\?[^]*Not sure where to route/.test(blocks[0]), 'questions not caught in Things to add');
-  expect(/Right now: Right now I just jot down/.test(blocks[2]), 'right now line not caught');
-  expect(/Open questions: New to obsidian and is there a way to sync/.test(blocks[3]), 'sync question not caught as an open question');
-  const all = blocks.join(' ').toLowerCase();
-  for (const word of ['tts application', 'cowork job', 'youtube video', 'premade answers', 'two options to talk it out']) {
+  const text = await p.textContent('.idea');
+  expect(/Right now: Right now I just jot down/.test(text), 'right now line not caught');
+  expect(/Open questions: But what if my ideas could go into a web app/.test(text), 'what if line not caught as a question');
+  const all = text.toLowerCase();
+  for (const word of ['spontaneous ideas', 'speak to prompt', 'include this note as an example', 'two options to talk it out', 'cloud model']) {
     expect(all.includes(word), 'dropped: ' + word);
   }
+  await p.fill('#raw', 'Things to add\nSomething went wrong button?\nNot sure where to route. Maybe trigger cowork task');
+  await p.click('#generate');
+  expect(/Open questions: Something went wrong button\?; Not sure where to route/.test(await p.textContent('.idea')), 'questions not caught');
 });
 
 await check('Copy puts the Markdown script and raw note on the clipboard', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
   const p = await ctx.newPage();
   await p.goto(BASE);
-  await p.fill('#raw', SHOWER_NOTE);
+  await p.fill('#raw', SHOWER_IDEA);
   await p.click('#generate');
   await p.click('#copy');
   await p.waitForSelector('#copyMsg:not([hidden])');
   const clip = await p.evaluate(() => navigator.clipboard.readText());
-  expect(clip.startsWith('# 💡 Things to add, and 3 more'), 'clipboard does not start with the note title');
-  expect(clip.includes('**🎙️ Read this out loud**') && clip.includes('- Open questions:'), 'clipboard missing script sections');
-  expect(clip.includes('## 📝 Raw note') && clip.includes("anything I've done"), 'raw note missing from clipboard');
+  expect(clip.startsWith('# \ud83d\udca1 Web app Shower thoughts'), 'clipboard does not start with the note title');
+  expect(clip.includes('**\ud83c\udf99\ufe0f Read this out loud**') && clip.includes('- Open questions:'), 'clipboard missing script sections');
+  expect(clip.includes('## \ud83d\udcdd Raw note') && clip.includes('Utilize shortcut use cloud model'), 'raw note missing from clipboard');
 });
 
 await check('One line with no title still works', async () => {

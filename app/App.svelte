@@ -43,7 +43,7 @@
       id="raw"
       bind:value={raw}
       rows="9"
-      placeholder="Dump it here, messy is fine. Put a blank line between ideas and start each one with a short title."
+      placeholder="One idea at a time. Start with a short title, then dump the rest. Messy is fine."
       autocomplete="off"
       autocapitalize="sentences"
       spellcheck="true"></textarea>
@@ -55,19 +55,16 @@
       <h2 id="scriptTitle">{script.title}</h2>
       <p class="hint">Quick version: it tidies your words into the layout. Real reorganizing comes with the Gemini upgrade.</p>
 
-      {#each script.blocks as b}
-        <article class="idea">
-          <h3>{b.title}</h3>
-          <p class="tag">🎙️ Read this out loud</p>
-          <p class="read">{b.readAloud}</p>
-          <p class="tag">🧩 Skeleton</p>
-          <ul class="skel">
-            {#each b.skeleton as [label, value]}
-              <li><b>{label}:</b> {value}</li>
-            {/each}
-          </ul>
-        </article>
-      {/each}
+      <article class="idea">
+        <p class="tag">🎙️ Read this out loud</p>
+        <p class="read">{script.readAloud}</p>
+        <p class="tag">🧩 Skeleton</p>
+        <ul class="skel">
+          {#each script.skeleton as [label, value]}
+            <li><b>{label}:</b> {value}</li>
+          {/each}
+        </ul>
+      </article>
 
       <details class="rawbox">
         <summary>📝 Raw note (kept at the bottom of the note)</summary>
