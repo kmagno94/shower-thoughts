@@ -32,11 +32,11 @@
     }
   }
 
-  /* Talk it out runs the same Speak to Prompt shortcut. The text input tells the
-     shortcut to bring you back here instead of to Speak to Prompt (Step 11). */
-  const SHORTCUT = 'Speak to Prompt';
-  const RETURN_FLAG = 'shower-thoughts';
-  const talkHref = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT) + '&input=text&text=' + RETURN_FLAG;
+  /* Talk it out runs Kevin's Shower Thoughts shortcut, a copy of the Speak to
+     Prompt shortcut that comes back here (Building Log Step 12). The name must
+     match exactly (DEV-13). The transcript comes back on the clipboard (DEV-3). */
+  const SHORTCUT = 'Shower Thoughts';
+  const talkHref = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT);
   const PLACEHOLDER = 'Speak to Prompt: waiting for your transcript';
 
   /* The shortcut needs an iPhone or iPad, so computers just get the text box. */

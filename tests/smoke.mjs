@@ -161,11 +161,11 @@ async function clipPage(hash = '', ua) {
   return p;
 }
 
-await check('Talk it out runs the Speak to Prompt shortcut with the return flag', async () => {
+await check('Talk it out runs the Shower Thoughts shortcut', async () => {
   const p = await clipPage('', IPHONE);
   expect(await p.isVisible('#talkLink'), 'Talk it out missing on iPhone');
   const href = await p.getAttribute('#talkLink', 'href');
-  expect(href === 'shortcuts://run-shortcut?name=Speak%20to%20Prompt&input=text&text=shower-thoughts', 'wrong link: ' + href);
+  expect(href === 'shortcuts://run-shortcut?name=Shower%20Thoughts', 'wrong link: ' + href);
 });
 
 await check('Computers get just the text box (no Talk it out)', async () => {
