@@ -2,7 +2,7 @@
 // (exit 1) on any broken check. Run: npm install && npm test (from the repo root).
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -257,6 +257,31 @@ await check('Saved note still passes the Save Shower Thought check (Read this ou
   const clip = await p.evaluate(() => navigator.clipboard.readText());
   expect(clip.includes('Read this out loud'), 'the shortcut would refuse this note: Read this out loud is missing');
   expect(clip.includes('## \ud83c\udf99\ufe0f Talking points'), 'Talking points heading missing');
+});
+
+/* Staging setup: every build shows its version; only the staging build
+   (STAGING=1) shows the STAGING badge, so the two never get mixed up. */
+const PKG = JSON.parse(readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'));
+const IS_STAGING = process.env.STAGING === '1';
+
+await check(`Shows its version (v${PKG.version}) at the bottom`, async () => {
+  const p = await page();
+  const v = (await p.textContent('#version')).trim();
+  expect(v.endsWith('v' + PKG.version), 'version shows ' + v);
+});
+
+await check(IS_STAGING ? 'Staging build shows the STAGING badge with its version' : 'Live build has no STAGING badge', async () => {
+  const p = await page();
+  const badge = await p.$('#stagingBadge');
+  if (IS_STAGING) {
+    expect(badge && await badge.isVisible(), 'STAGING badge missing on the staging build');
+    expect((await badge.textContent()).includes('STAGING v' + PKG.version), 'badge should name the version');
+    expect((await p.textContent('#version')).startsWith('Staging'), 'footer should say Staging');
+  } else {
+    expect(!badge, 'live must never show the STAGING badge');
+  }
+  const wide = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  expect(!wide, 'page scrolls sideways at 390px');
 });
 
 await browser.close();

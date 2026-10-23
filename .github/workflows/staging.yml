@@ -1,0 +1,29 @@
+# Runs the smoke tests on every push to the staging branch (live build and the
+# STAGING=1 build). When it passes, "Test and deploy" (deploy.yml) starts on its
+# own and publishes staging to /shower-thoughts/staging/. Live is not touched.
+name: Test staging
+
+on:
+  push:
+    branches: [staging]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke tests (live build)
+        run: npm test
+      - name: Smoke tests (staging build)
+        run: npm test
+        env:
+          STAGING: '1'
