@@ -32,7 +32,7 @@ One-time setup (done): repo Settings > Pages > Source: GitHub Actions.
 |---|---|
 | 1. Work on `staging` | Every change goes to the `staging` branch. A push runs "Test staging", and when it passes, staging updates at `/staging/`. Live doesn't change. |
 | 2. Test on staging | Staging shows a yellow STAGING badge and its version, so it never gets mixed up with live. |
-| 3. Promote | Open a pull request from `staging` into `main` and merge it (merge commit). Then tag `main` with the version, for example `v0.1.2`. That push deploys live. |
+| 3. Promote | Bump the version in `package.json` on staging, then open a pull request from `staging` into `main` and merge it (merge commit). That deploys live, and the deploy tags `main` with the version (for example `v0.1.2`) by itself. |
 | 4. Roll back | Actions > Test and deploy > Run workflow, type an older tag like `v0.1.0`. Live goes back to that version. Nothing on `main` changes, and there are no force pushes. |
 
 Rules that keep it safe:
