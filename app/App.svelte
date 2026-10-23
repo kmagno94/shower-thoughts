@@ -1,5 +1,6 @@
 <script>
   import { buildScript, CUE } from './lib/script.js';
+  import { VERSION, STAGING } from './lib/env.js';
 
   let raw = $state('');
   let script = $state(null);
@@ -90,6 +91,9 @@
 </script>
 
 <main class="wrap">
+  {#if STAGING}
+    <p id="stagingBadge" class="stgbadge" role="note"><b>STAGING {VERSION}</b> Test copy. Your live app is unchanged.</p>
+  {/if}
   <h1 id="title">Shower Thoughts <span aria-hidden="true">💡</span></h1>
   <p class="sub">Raw ideas in, read-aloud scripts out.</p>
 
@@ -154,4 +158,6 @@
       <p id="copyMsg" class="note" hidden={!copyMsg} aria-live="polite">{copyMsg}</p>
     </section>
   {/if}
+
+  <p id="version" class="ver">{STAGING ? 'Staging ' : ''}{VERSION}</p>
 </main>

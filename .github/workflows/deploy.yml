@@ -1,44 +1,79 @@
-# Builds Shower Thoughts, runs the smoke tests, and publishes to GitHub Pages
-# on every push to main. A failing test stops the deploy, so the live site
-# only ever gets a build that passed.
+# Publishes the GitHub Pages site: live at /shower-thoughts/ and staging at
+# /shower-thoughts/staging/ (scripts/build-site.sh builds both, tests first).
+#
+# When it runs:
+# - Push to main (a promote merged): live becomes main.
+# - "Test staging" passed on a staging push: staging updates, live stays as it is.
+# - Run workflow by hand with a tag (Actions > Test and deploy > Run workflow):
+#   deploys that version tag to live. This is the roll back. Nothing on main changes.
+#
+# What's live is remembered by the "live" git tag, so a staging deploy never
+# undoes a roll back. Only this workflow moves that tag.
 # One-time setup: repo Settings > Pages > Build and deployment > Source: "GitHub Actions".
 name: Test and deploy
 
 on:
   push:
     branches: [main]
+  workflow_run:
+    workflows: [Test staging]
+    types: [completed]
+    branches: [staging]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Deploy a tag to live (roll back), for example v0.1.0. Leave empty to just redeploy.'
+        required: false
+        default: ''
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - name: Smoke tests
-        run: npm test
-      - name: Build for GitHub Pages
-        run: npm run build
+      - name: Pick what goes live
+        id: live
         env:
-          BASE_PATH: /${{ github.event.repository.name }}/
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          git fetch --tags --force origin
+          if [ "${{ github.event_name }}" = push ]; then
+            REF="${{ github.sha }}"; MOVE=1
+          elif [ -n "$TAG" ]; then
+            git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "::error::There's no tag called $TAG"; exit 1; }
+            REF="refs/tags/$TAG"; MOVE=1
+          elif git rev-parse -q --verify refs/tags/live >/dev/null; then
+            REF="refs/tags/live"; MOVE=0
+          else
+            REF="origin/main"; MOVE=1
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "move=$MOVE" >> "$GITHUB_OUTPUT"
+          echo "Live will be $REF ($(git rev-parse --short "$REF^{commit}"))"
+      - name: Build and test live and staging
+        run: bash scripts/build-site.sh "${{ steps.live.outputs.ref }}" "${{ github.event.repository.name }}"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: .site
+    outputs:
+      ref: ${{ steps.live.outputs.ref }}
+      move: ${{ steps.live.outputs.move }}
 
   deploy:
     needs: build
@@ -49,3 +84,13 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+        if: needs.build.outputs.move == '1'
+        with:
+          fetch-depth: 0
+      - name: Remember what's live (the "live" tag)
+        if: needs.build.outputs.move == '1'
+        run: |
+          git fetch --tags --force origin
+          git tag -f live "${{ needs.build.outputs.ref }}^{commit}"
+          git push -f origin refs/tags/live
